@@ -18,6 +18,14 @@ void handle_rctrl_servo(gatts_write_evt_param_t value)
 {
     int16_t angle = bytes_to_int16(value.value);
     ESP_LOGI(TAG, "Servo angle: %d", angle);
+    if (angle > 90)
+    {
+        angle = 90;
+    }
+    else if (angle < -90)
+    {
+        angle = -90;
+    }
     servo_set_angle(servo_comparator, angle);
 }
 
