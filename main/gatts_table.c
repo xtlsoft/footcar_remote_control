@@ -68,7 +68,7 @@ static uint8_t raw_adv_data[] = {
     /* tx power*/
     0x02, 0x0a, 0xeb,
     /* service uuid */
-    0x05, 0x05, 0xff, 0x00, 0xff, 0x00,
+    0x03, 0x03, 0xF3, 0x00,
     /* device name */
     0x0e, 0x09, 'F', 'O', 'O', 'T', 'C', 'A', 'R', '_', 'R', 'C', 'T', 'R', 'L'};
 static uint8_t raw_scan_rsp_data[] = {
@@ -77,7 +77,7 @@ static uint8_t raw_scan_rsp_data[] = {
     /* tx power */
     0x02, 0x0a, 0xeb,
     /* service uuid */
-    0x05, 0x05, 0xff, 0x00, 0xff, 0x00};
+    0x03, 0x03, 0xF3, 0x00};
 
 static esp_ble_adv_params_t adv_params = {
     .adv_int_min = 0x20,
@@ -116,7 +116,7 @@ static struct gatts_profile_inst heart_rate_profile_tab[PROFILE_NUM] = {
 };
 
 /* Service */
-static const uint32_t GATTS_SERVICE_UUID_RCTRL = 0x00FF00FF;
+static const uint16_t GATTS_SERVICE_UUID_RCTRL = 0x00F3;
 static const uint16_t GATTS_CHAR_UUID_RCTRL_SERVO = 0xFF01;
 static const uint16_t GATTS_CHAR_UUID_RCTRL_MOTOR_A = 0xFF02;
 static const uint16_t GATTS_CHAR_UUID_RCTRL_MOTOR_B = 0xFF03;
@@ -140,7 +140,7 @@ static const esp_gatts_attr_db_t gatt_db[RCTRL_IDX_NB] =
     {
         // Service Declaration
         [IDX_SVC_RCTRL] =
-            {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&primary_service_uuid, ESP_GATT_PERM_READ, sizeof(uint32_t), sizeof(GATTS_SERVICE_UUID_RCTRL), (uint8_t *)&GATTS_SERVICE_UUID_RCTRL}},
+            {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&primary_service_uuid, ESP_GATT_PERM_READ, sizeof(uint16_t), sizeof(GATTS_SERVICE_UUID_RCTRL), (uint8_t *)&GATTS_SERVICE_UUID_RCTRL}},
 
         /* Characteristic Declaration */
         [IDX_CHAR_RCTRL_SERVO] =
@@ -172,7 +172,6 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
 {
     switch (event)
     {
-#ifdef CONFIG_SET_RAW_ADV_DATA
     case ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT:
         adv_config_done &= (~ADV_CONFIG_FLAG);
         if (adv_config_done == 0)
@@ -187,22 +186,6 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
             esp_ble_gap_start_advertising(&adv_params);
         }
         break;
-#else
-    case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT:
-        adv_config_done &= (~ADV_CONFIG_FLAG);
-        if (adv_config_done == 0)
-        {
-            esp_ble_gap_start_advertising(&adv_params);
-        }
-        break;
-    case ESP_GAP_BLE_SCAN_RSP_DATA_SET_COMPLETE_EVT:
-        adv_config_done &= (~SCAN_RSP_CONFIG_FLAG);
-        if (adv_config_done == 0)
-        {
-            esp_ble_gap_start_advertising(&adv_params);
-        }
-        break;
-#endif
     case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
         /* advertising start complete event to indicate advertising start successfully or failed */
         if (param->adv_start_cmpl.status != ESP_BT_STATUS_SUCCESS)
@@ -324,6 +307,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         {
             ESP_LOGE(GATTS_TABLE_TAG, "set device name failed, error code = %x", set_dev_name_ret);
         }
+
         esp_err_t raw_adv_ret = esp_ble_gap_config_adv_data_raw(raw_adv_data, sizeof(raw_adv_data));
         if (raw_adv_ret)
         {
@@ -336,6 +320,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
             ESP_LOGE(GATTS_TABLE_TAG, "config raw scan rsp data failed, error code = %x", raw_scan_ret);
         }
         adv_config_done |= SCAN_RSP_CONFIG_FLAG;
+
         esp_err_t create_attr_ret = esp_ble_gatts_create_attr_tab(gatt_db, gatts_if, RCTRL_IDX_NB, SVC_INST_ID);
         if (create_attr_ret)
         {
