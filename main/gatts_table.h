@@ -4,25 +4,22 @@
  * SPDX-License-Identifier: Unlicense OR CC0-1.0
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-
 /* Attributes State Machine */
 enum
 {
-    IDX_SVC,
-    IDX_CHAR_A,
-    IDX_CHAR_VAL_A,
-    IDX_CHAR_CFG_A,
+    IDX_SVC_RCTRL,
+    IDX_CHAR_RCTRL_SERVO,
+    IDX_CHAR_VAL_RCTRL_SERVO,
 
-    IDX_CHAR_B,
-    IDX_CHAR_VAL_B,
+    IDX_CHAR_RCTRL_MOTOR_A,
+    IDX_CHAR_VAL_RCTRL_MOTOR_A,
 
-    IDX_CHAR_C,
-    IDX_CHAR_VAL_C,
+    IDX_CHAR_RCTRL_MOTOR_B,
+    IDX_CHAR_VAL_RCTRL_MOTOR_B,
 
-    HRS_IDX_NB,
+    RCTRL_IDX_NB,
 };
