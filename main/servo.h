@@ -4,6 +4,7 @@
 
 struct servo_config
 {
+    int pwm_group_id;
     int min_pulsewidth_us;
     int max_pulsewidth_us;
     int min_degree;

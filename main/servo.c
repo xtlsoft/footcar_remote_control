@@ -1,12 +1,9 @@
 #include "servo.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include "esp_log.h"
 
 static const char *TAG = "servo";
 
-// Please consult the datasheet of your servo before changing the following parameters
 #define SERVO_MIN_PULSEWIDTH_US 1000 // Minimum pulse width in microsecond
 #define SERVO_MAX_PULSEWIDTH_US 2500 // Maximum pulse width in microsecond
 #define SERVO_MIN_DEGREE -90         // Minimum angle
@@ -18,6 +15,7 @@ static const char *TAG = "servo";
 servo_config_t servo_default_config(void)
 {
     return (servo_config_t){
+        .pwm_group_id = 0,
         .min_pulsewidth_us = SERVO_MIN_PULSEWIDTH_US,
         .max_pulsewidth_us = SERVO_MAX_PULSEWIDTH_US,
         .min_degree = SERVO_MIN_DEGREE,
@@ -45,7 +43,7 @@ servo_handle_t servo_init(servo_config_t *config)
     ESP_LOGI(TAG, "Create timer and operator");
     mcpwm_timer_handle_t timer = NULL;
     mcpwm_timer_config_t timer_config = {
-        .group_id = 0,
+        .group_id = config->pwm_group_id,
         .clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT,
         .resolution_hz = config->timebase_resolution_hz,
         .period_ticks = config->timebase_period,
@@ -56,7 +54,7 @@ servo_handle_t servo_init(servo_config_t *config)
 
     mcpwm_oper_handle_t oper = NULL;
     mcpwm_operator_config_t operator_config = {
-        .group_id = 0, // operator must be in the same group to the timer
+        .group_id = config->pwm_group_id, // operator must be in the same group to the timer
     };
     ESP_ERROR_CHECK(mcpwm_new_operator(&operator_config, &oper));
     servo->operator= oper;
