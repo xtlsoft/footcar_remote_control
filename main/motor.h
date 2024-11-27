@@ -12,6 +12,9 @@ struct motor_config
 };
 typedef struct motor_config motor_config_t;
 
+typedef struct motor_drv_stby motor_drv_stby_t;
+typedef motor_drv_stby_t *motor_drv_stby_handle_t;
+
 struct motor
 {
     motor_config_t config;
@@ -43,8 +46,6 @@ struct motor_drv_stby
     int total_motors;
     motor_t *motors[2];
 };
-typedef struct motor_drv_stby motor_drv_stby_t;
-typedef motor_drv_stby_t *motor_drv_stby_handle_t;
 
 enum motor_drv_stby_status
 {
