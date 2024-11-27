@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { connectServer } from '@/ble/device';
-import { writeServo } from '@/ble/rctrl';
-import { ref, watchEffect } from 'vue';
+import { writeServo, writeMotorA } from '@/ble/rctrl';
+import { ref, watchEffect, watch } from 'vue';
 import { Slider } from 'tdesign-mobile-vue';
 
 const connected = ref(false);
@@ -20,15 +20,17 @@ async function doOperation(op: () => Promise<any>) {
   }
 }
 
-const sliderValue = ref(0);
+const servoAngle = ref(0);
+const motorASpeed = ref(0);
 
-watchEffect(async () => {
-  if (connected.value) {
-    if (!operating.value) {
-      doOperation(async () => await writeServo(sliderValue.value));
-    }
-  }
+watch(servoAngle, (angle) => {
+  doOperation(() => writeServo(angle));
 });
+
+watch(motorASpeed, (speed) => {
+  doOperation(() => writeMotorA(speed));
+});
+
 </script>
 
 <template>
@@ -37,6 +39,13 @@ watchEffect(async () => {
     <button @click="connect">Connect</button>
     <p>Status: <span>{{ connected ? 'Connected' : 'Not Connected' }}</span></p>
     <br>
-    <slider v-model:value="sliderValue" :label="true" :min="-90" :max="90" />
+    <p>
+      Servo Angle:
+      <slider v-model:value="servoAngle" :label="true" :min="-90" :max="90" />
+    </p>
+    <p>
+      Motor A Speed:
+      <slider v-model:value="motorASpeed" :label="true" :min="-100" :max="100" />
+    </p>
   </main>
 </template>
