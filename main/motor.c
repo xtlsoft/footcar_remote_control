@@ -1,6 +1,7 @@
 #include "motor.h"
 
 #include "esp_log.h"
+#include "driver/gpio.h"
 
 static const char *TAG = "motor";
 
@@ -18,6 +19,7 @@ motor_handle_t motor_init(motor_config_t *config)
     ESP_LOGI(TAG, "Initialize motor");
     motor_handle_t motor = (motor_handle_t)malloc(sizeof(motor_t));
     motor->config = *config;
+    motor->stby = 0;
 
     ESP_LOGI(TAG, "Create timer and operator");
     mcpwm_timer_handle_t timer = NULL;
@@ -63,6 +65,7 @@ motor_handle_t motor_init(motor_config_t *config)
     motor->generator_b = generator_b;
 
     // Set initial speeds
+    motor->speed = 0;
     motor_set_percentage_cmpr_a(motor, 0);
     motor_set_percentage_cmpr_b(motor, 0);
 
@@ -101,7 +104,12 @@ void motor_set_speed(motor_handle_t motor, int speed)
         speed = 100;
     if (unlikely(speed < -100))
         speed = -100;
-    if (speed > 0)
+    motor->speed = speed;
+    if (likely(motor->stby))
+    {
+        motor_drv_stby_notify(motor->stby);
+    }
+    if (speed >= 0)
     {
         motor_set_percentage_cmpr_a(motor, speed);
         motor_set_percentage_cmpr_b(motor, 0);
@@ -111,15 +119,11 @@ void motor_set_speed(motor_handle_t motor, int speed)
         motor_set_percentage_cmpr_a(motor, 0);
         motor_set_percentage_cmpr_b(motor, -speed);
     }
-    else
-    {
-        motor_set_percentage_cmpr_a(motor, 0);
-        motor_set_percentage_cmpr_b(motor, 0);
-    }
 }
 
 void motor_brake(motor_handle_t motor)
 {
+    motor->speed = 0;
     motor_set_percentage_cmpr_a(motor, 100);
     motor_set_percentage_cmpr_b(motor, 100);
 }
@@ -134,4 +138,57 @@ void motor_free(motor_handle_t motor)
     mcpwm_del_operator(motor->operator);
     mcpwm_del_timer(motor->timer);
     free(motor);
+}
+
+motor_drv_stby_handle_t motor_drv_stby_init(int pin)
+{
+    motor_drv_stby_handle_t stby = (motor_drv_stby_handle_t)malloc(sizeof(motor_drv_stby_t));
+    stby->pin = pin;
+    stby->total_motors = 0;
+    gpio_config_t io_conf = {
+        .pin_bit_mask = 1ULL << pin,
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    ESP_ERROR_CHECK(gpio_config(&io_conf));
+    motor_drv_stby_set(stby, MOTOR_DRV_STBY_STATUS_OFF);
+    return stby;
+}
+
+void motor_drv_stby_add(motor_drv_stby_handle_t stby, motor_handle_t motor)
+{
+    if (likely(stby->total_motors < 2))
+    {
+        stby->motors[stby->total_motors++] = motor;
+        motor->stby = stby;
+    }
+    else
+    {
+        ESP_LOGE(TAG, "Cannot add more motors to the STBY driver");
+    }
+}
+
+void motor_drv_stby_notify(motor_drv_stby_handle_t stby)
+{
+    for (int i = 0; i < stby->total_motors; i++)
+    {
+        if (stby->motors[i]->speed != 0)
+        {
+            motor_drv_stby_set(stby, MOTOR_DRV_STBY_STATUS_ON);
+            return;
+        }
+    }
+    motor_drv_stby_set(stby, MOTOR_DRV_STBY_STATUS_OFF);
+}
+
+void motor_drv_stby_set(motor_drv_stby_handle_t stby, motor_drv_stby_status_t status)
+{
+    ESP_ERROR_CHECK(gpio_set_level(stby->pin, status));
+}
+
+void motor_drv_stby_free(motor_drv_stby_handle_t stby)
+{
+    free(stby);
 }

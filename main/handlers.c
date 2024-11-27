@@ -13,6 +13,7 @@ const char *TAG = "handlers";
 static led_strip_handle_t led_strip;
 static servo_handle_t servo;
 static motor_handle_t motor_a, motor_b;
+static motor_drv_stby_handle_t motor_drv_stby;
 
 void app_init()
 {
@@ -31,6 +32,10 @@ void app_init()
     motor_config.pin_a = MOTOR_B_PIN1;
     motor_config.pin_b = MOTOR_B_PIN2;
     motor_b = motor_init(&motor_config);
+
+    motor_drv_stby = motor_drv_stby_init(MOTOR_DRV_STBY_GPIO);
+    motor_drv_stby_add(motor_drv_stby, motor_a);
+    motor_drv_stby_add(motor_drv_stby, motor_b);
 }
 
 void handle_rctrl_servo(gatts_write_evt_param_t value)
